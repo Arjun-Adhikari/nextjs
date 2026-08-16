@@ -1,219 +1,69 @@
-"use client";
+import Image from "next/image";
 
-import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-
-import { createTodo } from "../lib/actions/todos";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-const formSchema = z.object({
-  firstName: z.string().min(1, "First name required"),
-  lastName: z.string().min(1, "Last name required"),
-
-  photo: z
-    .custom<FileList>()
-    .refine((files) => files?.length > 0, "Photo is required")
-    .refine(
-      (files) => files?.[0]?.size <= MAX_FILE_SIZE,
-      "Maximum file size is 5 MB",
-    )
-    .refine(
-      (files) =>
-        ["image/jpeg", "image/png", "application/pdf"].includes(
-          files?.[0]?.type,
-        ),
-      "Only JPG, PNG, and PDF files are allowed",
-    ),
-});
-
-type IFormInput = z.infer<typeof formSchema>;
-
-export default function SimpleForm() {
-  const [isUploading, setIsUploading] = useState(false);
-  const [serverError, setServerError] = useState("");
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<IFormInput>({
-    resolver: zodResolver(formSchema),
-  });
-
-  const onSubmit: SubmitHandler<IFormInput> = async (data) => {
-    try {
-      setIsUploading(true);
-      setServerError("");
-
-      const file = data.photo[0];
-
-      if (!file) {
-        throw new Error("Please select a file");
-      }
-
-      // ----------------------------------------
-      // 1. Ask Next.js for a presigned S3 URL
-      // ----------------------------------------
-
-      const presignResponse = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: file.type,
-        }),
-      });
-console.log(presignResponse);
-      if (!presignResponse.ok) {
-        throw new Error("Failed to generate upload URL");
-      }
-
-      const { uploadUrl, key } = await presignResponse.json();
-
-      // ----------------------------------------
-      // 2. Upload the actual file directly to S3
-      // ----------------------------------------
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file to S3");
-      }
-
-      // ----------------------------------------
-      // 3. Save the S3 key in your database
-      // ----------------------------------------
-
-      const formData = new FormData();
-
-      formData.append("firstname", data.firstName);
-      formData.append("lastname", data.lastName);
-      formData.append("photokey", key);
-
-      await createTodo(null, formData);
-
-      // ----------------------------------------
-      // 4. Reset form
-      // ----------------------------------------
-
-      reset();
-
-      console.log("Upload successful:", key);
-    } catch (error) {
-      console.error(error);
-
-      setServerError(
-        error instanceof Error ? error.message : "Something went wrong",
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
+export default function Home() {
   return (
-    <div className="max-w-xs mx-auto p-4 flex flex-col items-center gap-4">
-      <h1 className="text-xl font-bold">Todo App</h1>
-
-      <form
-        className="flex flex-col gap-3 w-full"
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        {/* First name */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="firstName" className="text-sm">
-            First Name
-          </label>
-
-          <input
-            type="text"
-            id="firstName"
-            className="border p-1.5 rounded"
-            {...register("firstName")}
-          />
-
-          {errors.firstName && (
-            <span className="text-red-500 text-sm">
-              {errors.firstName.message}
-            </span>
-          )}
+    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+        <Image
+          className="dark:invert h-5 w-[100px]"
+          src="/next.svg"
+          alt="Next.js logo"
+          width={100}
+          height={20}
+          priority
+        />
+        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
+          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+            To get started, edit the{" "}
+            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
+              page.tsx
+            </code>{" "}
+            file.
+          </h1>
+          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            Looking for a starting point or more instructions? Head over to{" "}
+            <a
+              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
+            >
+              Templates
+            </a>{" "}
+            or the{" "}
+            <a
+              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
+            >
+              Learning
+            </a>{" "}
+            center.
+          </p>
         </div>
-
-        {/* Last name */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="lastName" className="text-sm">
-            Last Name
-          </label>
-
-          <input
-            type="text"
-            id="lastName"
-            className="border p-1.5 rounded"
-            {...register("lastName")}
-          />
-
-          {errors.lastName && (
-            <span className="text-red-500 text-sm">
-              {errors.lastName.message}
-            </span>
-          )}
+        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+          <a
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className="dark:invert h-[14px] w-4"
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={16}
+              height={14}
+            />
+            Deploy Now
+          </a>
+          <a
+            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
         </div>
-
-        {/* File */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="photo" className="text-sm">
-            Add Photo
-          </label>
-
-          <input
-            type="file"
-            id="photo"
-            accept="image/jpeg,image/png,application/pdf"
-            {...register("photo")}
-            className="text-sm"
-          />
-
-          {errors.photo && (
-            <span className="text-red-500 text-sm">{errors.photo.message}</span>
-          )}
-        </div>
-
-        {/* Server error */}
-        {serverError && <p className="text-red-500 text-sm">{serverError}</p>}
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={isUploading}
-          className="bg-black text-white p-2 rounded mt-2 disabled:opacity-50"
-        >
-          {isUploading ? "Uploading..." : "Submit"}
-        </button>
-      </form>
-
-      {/* Todo list */}
-      <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="flex justify-center">Lists of todos</h1>
-        </div>
-
-        <div className="flex gap-10">
-          <h1>SN</h1>
-          <span>Firstname</span>
-          <span>Lastname</span>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
