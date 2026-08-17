@@ -1,9 +1,14 @@
 "use server";
-import db from "../db";
+import { query } from "../db";
+
 export async function createTodo(prevState: any, formData: FormData) {
-  const savedData = await db.insert(todos).values({
-    firstname: formData.get("firstname"),
-    lastname: formData.get("lastname"),
-    photourl: formData.get("photourl"),
-  });
-}
+  const savedData = await query(
+    "INSERT INTO todos (firstname, lastname, photo) VALUES ($1, $2, $3) RETURNING *",
+    [
+      formData.get("firstname"),
+      formData.get("lastname"),
+      formData.get("photo"),
+    ],
+  );
+  return savedData.rows;
+}   
