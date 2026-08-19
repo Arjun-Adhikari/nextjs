@@ -66,12 +66,29 @@ Record of everything done in this session to get the app saving data to the data
 - Submitting the form persists a row into `todo.users` via the `todo_app` role.
 - Verified end-to-end: real INSERT as `todo_app` succeeded (test row inserted then removed).
 
+## Basic feature: `/users` page
+
+- Simple server component at `src/app/users/page.tsx` that lists rows from the `arjun_adhikari` database (student sample data).
+- Basic implementation only — one read-only query, no auth, no pagination.
+- Dedicated connection in `src/lib/users-db.ts` (same `pg` pattern as `db.ts`) reading `USERS_DATABASE_URL`.
+- Run the app and visit `http://localhost:3000/users`.
+
+## Environment variables (`.env.local`, git-ignored)
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Main todo app connection (db `todo`, role `todo_app`) |
+| `USERS_DATABASE_URL` | `/users` page connection (db `arjun_adhikari`, role `todo_app`) |
+| `AWS_*` | S3 presign upload for the todo form photo |
+
 ## Files touched this session
 
 | File | Change |
 |---|---|
 | `src/lib/actions/todos.ts` | Rewrote to use `query` from `db.ts`; INSERT into `users`, reads `photokey` |
 | `src/app/page.tsx` | Form now calls `createTodo` with FormData (`firstname`, `lastname`, `photokey`) |
-| `.env.local` | `DATABASE_URL` fixed to `todo_app` credentials (never commit; already git-ignored) |
+| `src/lib/users-db.ts` | New: pg pool + `usersQuery` helper for the `arjun_adhikari` database |
+| `src/app/users/page.tsx` | New: basic users listing page (server component) |
+| `.env.local` | `DATABASE_URL` fixed to `todo_app` credentials; added `USERS_DATABASE_URL` (never commit; already git-ignored) |
 | `schema.sql` | Created then deleted (not needed) |
 | `DOCUMENTATION.md` | This file |
