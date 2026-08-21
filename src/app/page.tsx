@@ -1,11 +1,16 @@
 "use client";
 
+import axios from "axios";
 import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { createTodo } from "../lib/actions/todos";
+import {
+  AnalyticsExportDestination$,
+  BucketAlreadyExists,
+} from "@aws-sdk/client-s3";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -59,36 +64,58 @@ export default function SimpleForm() {
       // 1. Ask Next.js for a presigned S3 URL
       // ----------------------------------------
 
-      const presignResponse = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileName: file.name,
+      // const presignResponse = await fetch("/api/uploads/presign", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     fileName: file.name,
+      //     contentType: file.type,
+      //   }),
+      // });
+      const presignResponse = await axios.post(
+        "/api/uploads/presign",
+        {
+          filename: file.name,
           contentType: file.type,
-        }),
-      });
-console.log(presignResponse);
-      if (!presignResponse.ok) {
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      console.log(presignResponse);
+      if (!presignResponse) {
         throw new Error("Failed to generate upload URL");
       }
 
-      const { uploadUrl, key } = await presignResponse.json();
+      const { uploadUrl, key } = await presignResponse.data;
 
       // ----------------------------------------
       // 2. Upload the actual file directly to S3
       // ----------------------------------------
 
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-      });
+      // const uploadResponse = await fetch(uploadUrl, {
+      //   method: "PUT",
+      //   headers: {
+      //     "Content-Type": file.type,
+      //   },
+      //   body: file,
+      // });
 
-      if (!uploadResponse.ok) {
+      const uploadResponse = await axios.put(
+        uploadUrl,
+        file,
+        {
+          headers: {
+            "Content-Type": file.type,
+          },
+        },
+      );
+      
+      if (!uploadResponse) {
         throw new Error("Failed to upload file to S3");
       }
 
