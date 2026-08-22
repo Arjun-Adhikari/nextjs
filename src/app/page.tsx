@@ -1,17 +1,12 @@
 "use client";
 
 import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { createTodo } from "../lib/actions/todos";
-import {
-  AnalyticsExportDestination$,
-  BucketAlreadyExists,
-} from "@aws-sdk/client-s3";
-
+import { createTodo, showTodo } from "../lib/actions/todos";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const formSchema = z.object({
@@ -35,11 +30,18 @@ const formSchema = z.object({
 });
 
 type IFormInput = z.infer<typeof formSchema>;
-
+interface TodoItem {
+  id: number;
+  firstname: string;
+  lastname: string;
+  photourl?: string;
+}
 export default function SimpleForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [serverError, setServerError] = useState("");
 
+  const [todos,setTodos] = useState<TodoItem[]>([]);
+  const [isLoadingTodos, setIsLoadingTodos] = useState(true);
   const {
     register,
     handleSubmit,
@@ -49,6 +51,23 @@ export default function SimpleForm() {
     resolver: zodResolver(formSchema),
   });
 
+  const fetchTodos = async () => {
+    try {
+      setIsLoadingTodos(true);
+      const data = await showTodo();
+      setTodos(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load todos:", error);
+    } finally {
+      setIsLoadingTodos(false);
+    }
+  };
+
+useEffect(()=>{
+  fetchTodos();
+
+},[]);
+
   const onSubmit: SubmitHandler<IFormInput> = async (data) => {
     try {
       setIsUploading(true);
@@ -56,24 +75,13 @@ export default function SimpleForm() {
 
       const file = data.photo[0];
 
-      if (!file) {
+      if (!file) {  
         throw new Error("Please select a file");
       }
 
       // ----------------------------------------
       // 1. Ask Next.js for a presigned S3 URL
       // ----------------------------------------
-
-      // const presignResponse = await fetch("/api/uploads/presign", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     fileName: file.name,
-      //     contentType: file.type,
-      //   }),
-      // });
       const presignResponse = await axios.post(
         "/api/uploads/presign",
         {
@@ -96,25 +104,12 @@ export default function SimpleForm() {
       // ----------------------------------------
       // 2. Upload the actual file directly to S3
       // ----------------------------------------
-
-      // const uploadResponse = await fetch(uploadUrl, {
-      //   method: "PUT",
-      //   headers: {
-      //     "Content-Type": file.type,
-      //   },
-      //   body: file,
-      // });
-
-      const uploadResponse = await axios.put(
-        uploadUrl,
-        file,
-        {
-          headers: {
-            "Content-Type": file.type,
-          },
+      const uploadResponse = await axios.put(uploadUrl, file, {
+        headers: {
+          "Content-Type": file.type,
         },
-      );
-      
+      });
+
       if (!uploadResponse) {
         throw new Error("Failed to upload file to S3");
       }
@@ -230,16 +225,35 @@ export default function SimpleForm() {
       </form>
 
       {/* Todo list */}
-      <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="flex justify-center">Lists of todos</h1>
-        </div>
+      <div className="flex flex-col gap-3 w-full">
+        <h2 className="text-lg font-semibold text-center">Lists of todos</h2>
 
-        <div className="flex gap-10">
-          <h1>SN</h1>
-          <span>Firstname</span>
-          <span>Lastname</span>
-        </div>
+        {isLoadingTodos ? (
+          <p className="text-sm text-gray-500 text-center">Loading...</p>
+        ) : todos.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center">No todos yet</p>
+        ) : (
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="border p-1.5">SN</th>
+                <th className="border p-1.5">Firstname</th>
+                <th className="border p-1.5">Lastname</th>
+                <th className="border p-1.5">Photo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {todos.map((todo, index) => (
+                <tr key={todo.id}>
+                  <td className="border p-1.5">{index + 1}</td>
+                  <td className="border p-1.5">{todo.firstname}</td>
+                  <td className="border p-1.5">{todo.lastname}</td>
+                  <td className="border p-1.5">{todo.photourl || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
