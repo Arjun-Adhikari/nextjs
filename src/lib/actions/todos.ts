@@ -11,4 +11,4 @@ export async function createTodo(prevState: any, formData: FormData) {
     ],
   );
   return savedData.rows;
-}   
+}
