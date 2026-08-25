@@ -5,9 +5,37 @@ Record of everything done in this session to get the app saving data to the data
 ## Project overview
 
 - Next.js 16.3.0 (Turbopack), React 19, TypeScript
-- Server actions + `react-hook-form` + `zod` form validation
-- Form flow: validate -> presign S3 URL (`/api/uploads/presign`) -> upload file to S3 -> save S3 key + names to DB
+- `react-hook-form` + `zod` form validation
+- `axios` for HTTP requests (presign S3 URL, upload to S3)
+- **Suspense streaming**: form is a client component, todo list is a server component — they render independently via `<Suspense>`
+- Form flow: validate -> presign S3 URL (`/api/uploads/presign`) -> upload file to S3 -> save S3 key + names to DB via server action
 - Database: local PostgreSQL 18 (`localhost:5432`), also has local MySQL 8.0 (`localhost:3306`)
+
+## Architecture
+
+```
+src/
+├── app/
+│   ├── page.tsx               ← server component (Suspense + TodoForm + TodoList)
+│   ├── layout.tsx              ← root layout
+│   ├── users/page.tsx          ← server component (arjun_adhikari users listing)
+│   └── api/uploads/presign/    ← presign route handler for S3 uploads
+├── components/
+│   ├── TodoForm.tsx            ← client component (form, axios, react-hook-form)
+│   └── TodoList.tsx            ← server component (queries DB, streams table)
+├── lib/
+│   ├── db.ts                   ← pg pool for `todo` database
+│   ├── users-db.ts             ← pg pool for `arjun_adhikari` database
+│   ├── actions/todos.ts        ← server action (createTodo only)
+│   └── aws/s3.ts               ← S3 client config
+```
+
+### Suspense pattern
+
+- `page.tsx` is a **server component** (no `"use client"`) — it imports both a client component (`TodoForm`) and a server component (`TodoList`)
+- `<TodoList />` is wrapped in `<Suspense fallback={...}>` — streams in independently after the DB query resolves
+- `<TodoForm />` is a `"use client"` component — renders instantly with react-hook-form + axios
+- This avoids bundling `pg` for the browser (which would break if `TodoList` were imported into a client component)
 
 ## Problems found and fixed
 
@@ -20,7 +48,7 @@ Record of everything done in this session to get the app saving data to the data
 
 - The URL used role `user` with a wrong password -> Postgres: `role "user" does not exist`.
 - The server only had the `postgres` role (empty password).
-- Fixed: created a dedicated `todo_app` role (least-privilege best practice) with a generated password, granted `CONNECT` on database `todo` and `SELECT/INSERT/UPDATE/DELETE` on all tables + sequences in schema `public`.
+- Fixed: created a dedicated `todo_app` role (least-privilege best practice) with a generated password, granted `CONNECT` on database `todo` and `SELECT/INSERT, UPDATE, DELETE` on all tables + sequences in schema `public`.
 - `.env.local` updated to `postgresql://todo_app:<password>@localhost:5432/todo` (password only in `.env.local`, which is git-ignored).
 
 ### 3. Database was actually named `"  todo"` (two leading spaces)
@@ -38,6 +66,11 @@ Record of everything done in this session to get the app saving data to the data
 - The `users` table already existed (created by the user) with columns: `id, firstname, lastname, photo, is_completed, created_at`.
 - Action fixed to `INSERT INTO users (firstname, lastname, photo) VALUES ($1,$2,$3) RETURNING *`, reading the S3 `photokey` sent by the form (`page.tsx` uploads to S3 first, then sends `firstname`, `lastname`, `photokey`).
 - A temporary `schema.sql` (wrong `todos` definition) was created earlier and later deleted — the real table is `users`.
+
+### 6. `main` branch broken by accidental commit
+
+- Commit `766badb` ("initial commit") on `main` stripped all dependencies from `package.json` and reverted `page.tsx` to the Create Next App starter.
+- Fixed: restored `package.json`, `package-lock.json`, and `src/app/page.tsx` from `feat-server-actions`.
 
 ## Other database housekeeping
 
@@ -63,8 +96,9 @@ Record of everything done in this session to get the app saving data to the data
 ## Current state
 
 - `npm run dev` boots clean, page returns HTTP 200 at `http://localhost:3000`.
-- Submitting the form persists a row into `todo.users` via the `todo_app` role.
-- Verified end-to-end: real INSERT as `todo_app` succeeded (test row inserted then removed).
+- Home page (`/`): form submits to S3 + DB via server action; todo list streams in via Suspense (2 rows currently in `todo.users`).
+- Users page (`/users`): lists 5 rows from `arjun_adhikari.users`.
+- Verified end-to-end: real INSERT as `todo_app` succeeded; Suspense fallback shows while DB query resolves.
 
 ## Basic feature: `/users` page
 
@@ -81,14 +115,19 @@ Record of everything done in this session to get the app saving data to the data
 | `USERS_DATABASE_URL` | `/users` page connection (db `arjun_adhikari`, role `todo_app`) |
 | `AWS_*` | S3 presign upload for the todo form photo |
 
-## Files touched this session
+## Files
 
-| File | Change |
-|---|---|
-| `src/lib/actions/todos.ts` | Rewrote to use `query` from `db.ts`; INSERT into `users`, reads `photokey` |
-| `src/app/page.tsx` | Form now calls `createTodo` with FormData (`firstname`, `lastname`, `photokey`) |
-| `src/lib/users-db.ts` | New: pg pool + `usersQuery` helper for the `arjun_adhikari` database |
-| `src/app/users/page.tsx` | New: basic users listing page (server component) |
-| `.env.local` | `DATABASE_URL` fixed to `todo_app` credentials; added `USERS_DATABASE_URL` (never commit; already git-ignored) |
-| `schema.sql` | Created then deleted (not needed) |
-| `DOCUMENTATION.md` | This file |
+| File | Type | Purpose |
+|---|---|---|
+| `src/app/page.tsx` | Server component | Home page — wraps TodoForm + TodoList in Suspense |
+| `src/app/layout.tsx` | Server component | Root layout (fonts, CSS) |
+| `src/app/users/page.tsx` | Server component | Users listing from `arjun_adhikari` DB |
+| `src/app/api/uploads/presign/route.ts` | Route handler | Generates presigned S3 upload URL |
+| `src/components/TodoForm.tsx` | Client component | Form: react-hook-form + zod + axios + S3 upload |
+| `src/components/TodoList.tsx` | Server component | Queries `todo.users`, renders table |
+| `src/lib/db.ts` | Utility | pg pool + `query` helper for `todo` database |
+| `src/lib/users-db.ts` | Utility | pg pool + `usersQuery` helper for `arjun_adhikari` database |
+| `src/lib/actions/todos.ts` | Server action | `createTodo` — inserts into `todo.users` |
+| `src/lib/aws/s3.ts` | Utility | S3 client config (reads `AWS_*` env vars) |
+| `.env.local` | Config | DB URLs + AWS credentials (git-ignored) |
+| `DOCUMENTATION.md` | Docs | This file |
