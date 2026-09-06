@@ -43,11 +43,12 @@ export default function TodoForm() {
     const file = data.photo[0];
 
     try {
+      startTransition(async () => {
       // 1. Fetch presigned URL using native fetch
       const presignResponse = await fetch("/api/uploads/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
       });
 
       if (!presignResponse.ok) throw new Error("Failed to generate upload URL");
@@ -64,14 +65,13 @@ export default function TodoForm() {
       if (!uploadResponse.ok) throw new Error("Failed to upload file to S3");
 
       // 3. Execute Server Action inside a transition
-      startTransition(async () => {
         const formData = new FormData();
         formData.append("firstname", data.firstName);
         formData.append("lastname", data.lastName);
         formData.append("photokey", key);
 
         // Assuming createTodo returns { error?: string } on failure
-        const result = await createTodo(null, formData);
+        const result = await createTodo( formData);
         
         if (result?.error) {
           setServerError(result.error);

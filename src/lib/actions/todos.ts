@@ -11,7 +11,7 @@ const todoSchema = z.object({
   photokey: z.string().min(1, "Photo key is required"),
 });
 
-export async function createTodo(prevState: any, formData: FormData) {
+export async function createTodo(formData: FormData) {
   try {
     // 2. Extract and validate data
     const validatedFields = todoSchema.safeParse({
