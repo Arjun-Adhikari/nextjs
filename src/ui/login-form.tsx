@@ -23,52 +23,40 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { signup } from "@/lib/actions/auth";
-import { SignupFormSchema } from "@/lib/definations";
+import { login } from "@/lib/actions/auth";
+import { LoginFormSchema } from "@/lib/definations";
 
-type SignupFormInput = z.infer<typeof SignupFormSchema>;
-type SignupFormState = Awaited<ReturnType<typeof signup>>;
+type LoginFormInput = z.infer<typeof LoginFormSchema>;
+type LoginFormState = Awaited<ReturnType<typeof login>>;
 
-export function SignupForm() {
+export function LoginForm() {
   const [isPending, startTransition] = useTransition();
-  const [formState, setFormState] = useState<SignupFormState>(undefined);
+  const [formState, setFormState] = useState<LoginFormState>(undefined);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignupFormInput>({
-    resolver: zodResolver(SignupFormSchema),
+  } = useForm<LoginFormInput>({
+    resolver: zodResolver(LoginFormSchema),
   });
 
-  const onSubmit: SubmitHandler<SignupFormInput> = (data) => {
+  const onSubmit: SubmitHandler<LoginFormInput> = (data) => {
     setFormState(undefined);
     startTransition(async () => {
-      setFormState(await signup(data));
+      setFormState(await login(data));
     });
   };
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Enter your details to get started.</CardDescription>
+        <CardTitle>Log in</CardTitle>
+        <CardDescription>Welcome back. Enter your details.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
-            <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="name">Name</FieldLabel>
-              <Input
-                id="name"
-                placeholder="Jane Doe"
-                autoComplete="name"
-                aria-invalid={!!errors.name}
-                {...register("name")}
-              />
-              <FieldError errors={errors.name ? [errors.name] : []} />
-            </Field>
-
             <Field data-invalid={!!errors.email}>
               <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
@@ -88,7 +76,7 @@ export function SignupForm() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 aria-invalid={!!errors.password}
                 {...register("password")}
               />
@@ -103,18 +91,18 @@ export function SignupForm() {
           )}
 
           <Button type="submit" disabled={isPending} className="mt-4 w-full">
-            {isPending ? "Signing up..." : "Sign up"}
+            {isPending ? "Logging in..." : "Log in"}
           </Button>
         </form>
       </CardContent>
       <CardFooter>
         <p className="flex w-full items-center justify-center gap-1 text-sm text-muted-foreground">
-          Already have an account?
+          Don&apos;t have an account?
           <Link
-            href="/auth/login"
+            href="/auth/signup"
             className="text-primary underline underline-offset-4 hover:text-primary/80"
           >
-            Log in
+            Sign up
           </Link>
         </p>
       </CardFooter>
