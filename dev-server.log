@@ -1,0 +1,31 @@
+
+> todo-app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.73:3000
+- Environments: .env.local
+✓ Ready in 467ms
+✓ Running next.config.ts took 1156ms
+
+Attention: Clerk collects telemetry data from its SDKs when connected to development instances.
+The data collected is used to inform Clerk's product roadmap.
+To learn more, including how to opt-out from the telemetry program, visit: https://clerk.com/docs/telemetry.
+
+ GET /auth/login 200 in 483ms (next.js: 114ms, proxy.ts: 168ms, application-code: 200ms)
+ GET /auth/signup 200 in 65ms (next.js: 18ms, proxy.ts: 14ms, application-code: 33ms)
+Executed Query: {
+  text: 'SELECT id, firstname, lastname, photo FROM users ORDER BY id',
+  duration: 741,
+  rows: 6
+}
+ GET / 200 in 840ms (next.js: 35ms, proxy.ts: 8ms, application-code: 797ms)
+ GET /auth/login 200 in 45ms (next.js: 3ms, proxy.ts: 11ms, application-code: 30ms)
+ GET /auth/signup 200 in 54ms (next.js: 3ms, proxy.ts: 19ms, application-code: 31ms)
+Executed Query: {
+  text: 'SELECT id, firstname, lastname, photo FROM users ORDER BY id',
+  duration: 45,
+  rows: 6
+}
+ GET / 200 in 69ms (next.js: 2ms, proxy.ts: 4ms, application-code: 63ms)
