@@ -29,10 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ClerkProvider appearance={{ theme: shadcn }}>
           <header className="flex items-center justify-end gap-3 p-4">
-            <Show when="signed-out">
-              <SignInButton />
-              <SignUpButton />
-            </Show>
+
             <Show when="signed-in">
               <UserButton />
             </Show>
