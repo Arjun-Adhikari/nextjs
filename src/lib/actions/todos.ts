@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { query } from "../db";
-
+import { auth } from "@clerk/nextjs/server";
 // 1. Define server-side validation
 const todoSchema = z.object({
   firstname: z.string().min(1, "First name is required"),
@@ -12,6 +12,10 @@ const todoSchema = z.object({
 });
 
 export async function createTodo(formData: FormData) {
+  const { userId } = await auth();
+  if (!userId) {
+    return { error: "You must be signed in." };
+  }
   try {
     // 2. Extract and validate data
     const validatedFields = todoSchema.safeParse({
@@ -34,10 +38,9 @@ export async function createTodo(formData: FormData) {
 
     // 4. Purge Next.js cache so the UI updates immediately
     // Replace "/" with the actual path where your list is displayed
-    revalidatePath("/"); 
+    revalidatePath("/");
 
     return { success: true, data: savedData.rows[0] };
-    
   } catch (error) {
     console.error("Database Mutation Error:", error);
     // Don't leak raw database errors to the client

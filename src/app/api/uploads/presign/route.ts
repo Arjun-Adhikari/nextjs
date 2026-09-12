@@ -1,9 +1,15 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "@/lib/aws/s3";
+import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from "crypto";
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { fileName, contentType } = await request.json();
   const key = `uploads/${randomUUID()}-${fileName}`;
   const command = new PutObjectCommand({

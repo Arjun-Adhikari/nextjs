@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import TodoForm from "../components/TodoForm";
 import TodoList from "../components/TodoList";
+import { verifySession } from "../lib/dal";
 
-export default function Home() {
+export default async function Home() {
+  await verifySession();
   return (
     <div className="max-w-xs mx-auto p-4 flex flex-col items-center gap-4">
       <h1 className="text-xl font-bold">Todo App</h1>

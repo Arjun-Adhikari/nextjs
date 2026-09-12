@@ -1,4 +1,5 @@
 import { usersQuery } from "../../lib/users-db";
+import { verifySession } from "../../lib/dal";
 
 type User = {
   id: number;
@@ -15,6 +16,8 @@ export const metadata = {
 };
 
 export default async function UsersPage() {
+  await verifySession();
+
   const { rows } = await usersQuery<User>(
     "SELECT id, rollno, firstname, lastname, email, address, created_at FROM users ORDER BY id",
   );

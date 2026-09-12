@@ -1,4 +1,4 @@
-import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import { shadcn } from '@clerk/ui/themes'
 
 import type { Metadata } from "next";
