@@ -1,5 +1,5 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
-
+// This function internally sees the cookies/session information and make the clerk realted state available for the rest of the application.
 export default clerkMiddleware()
 
 export const config = {
